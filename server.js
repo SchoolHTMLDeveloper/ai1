@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const adminpass1 = process.env.adminpassword;
+const adminpassword = process.env.adminpassword;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,7 +85,7 @@ app.get("/admin", (req, res) => {
 // ===== Admin Login Handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
-  if (username === process.env.adminpass1 && password === process.env.adminpass1) {
+  if (username === process.env.adminpassword && password === process.env.adminpassword) {
     res.redirect("/admin-panel");
   } else {
     res.status(401).send("⚠️ Invalid credentials.");
