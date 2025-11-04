@@ -85,7 +85,7 @@ app.get("/admin", (req, res) => {
 // ===== Admin Login Handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
-  if (username === process.env.adminpassword && password === process.env.adminpassword) {
+  if (username === process.env.adminuser && password === process.env.adminpassword) {
     res.redirect("/admin-panel");
   } else {
     res.status(401).send("⚠️ Invalid credentials.");
