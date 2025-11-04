@@ -11,11 +11,11 @@ const adminpassword = process.env.adminpassword;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===== Groq Settings =====
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+// ===== AI Settings =====
+const API_KEY = process.env.API_KEY;
 const GROQ_MODEL = "gemma-7b"; // Replace with a model you have access to
 
-if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set in environment variables!");
+if (!API_KEY) console.error("⚠️ KEY is not set in environment variables!");
 
 // ===== Middleware =====
 app.use(bodyParser.json());
@@ -36,12 +36,12 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
 
-    console.log("Sending messages to Groq API:", messages);
+    console.log("Sending messages to API:", messages);
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -51,7 +51,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const data = await response.json();
-    console.log("Groq API response:", JSON.stringify(data, null, 2));
+    console.log("API response:", JSON.stringify(data, null, 2));
 
     let reply = "⚠️ No reply";
     if (data?.choices && data.choices[0]?.message?.content) {
