@@ -3,6 +3,7 @@ const loginView = document.getElementById("login-view");
 const dashboardView = document.getElementById("dashboard-view");
 const toggleAI = document.getElementById("toggle-ai");
 const logoutBtn = document.getElementById("logout");
+const adminpass1 = process.env.adminpassword;
 
 // Login
 loginForm.onsubmit = async (e) => {
