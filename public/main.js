@@ -67,7 +67,14 @@ function renderChat() {
 function appendMessage(role, content) {
   const div = document.createElement("div");
   div.className = role === "user" ? "user-msg" : "ai-msg";
-  div.textContent = content;
+
+  // ===== Render Markdown instead of raw text =====
+  if (typeof marked !== "undefined") {
+    div.innerHTML = marked.parse(content);
+  } else {
+    div.textContent = content;
+  }
+
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
