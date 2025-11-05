@@ -3,8 +3,7 @@
 
 (function () {
   const ALLOWED_DOMAINS = new Set([
-    "gmail.com",
-    "sudents.davidson.k12.nc.us"
+    "gmail.com"
   ]);
 
   const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g;
