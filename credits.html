@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Credits</title>
+
+<style>
+/* RESET */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ROOT COLORS */
+:root {
+  --purple: #b84bff;
+  --purple-glow: rgba(184, 75, 255, 0.8);
+  --purple-dark: #2a0040;
+  --black: #0a0a0a;
+  --black-deep: #000000;
+  --white: #ffffff;
+}
+
+/* BACKGROUND */
+body {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at top, #240034 0%, #000 75%);
+  color: var(--white);
+}
+
+/* GLASS CARD */
+.credit-box {
+  width: 70%;
+  max-width: 700px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--purple);
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 0 25px rgba(184,75,255,0.25);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.8s ease-out;
+}
+
+/* TITLE */
+.credit-box h1 {
+  text-align: center;
+  font-size: 2rem;
+  color: var(--purple);
+  text-shadow: 0 0 12px var(--purple);
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+/* CREDITS LIST */
+ul {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 1rem;
+}
+
+li {
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid rgba(184,75,255,0.2);
+  font-size: 1.1rem;
+  transition: 0.2s;
+}
+
+li:hover {
+  color: var(--purple);
+  text-shadow: 0 0 8px var(--purple-glow);
+  transform: translateX(4px);
+}
+
+/* BUTTON */
+.back-btn {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.6rem 1.4rem;
+  background: var(--purple);
+  color: var(--black);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: 0 0 12px var(--purple-glow);
+  transition: 0.2s;
+}
+
+.back-btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 18px var(--purple-glow);
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<div class="credit-box">
+  <h1>Credits</h1>
+
+  <ul>
+    <li>UI Design — <b><a href="https://github.com/SchoolHTMLDeveloper">SchoolHTMLDev</a></b></li>
+    <li>Backend Logic — <b>Braxton</b></li>
+    <li>Frontend Structure — <b>Braxton</b></li>
+    <li>Theme Inspiration — <b>Purple Cyber Realm</b></li>
+
+  </ul>
+
+  <a href="index.html" class="back-btn">← Back</a>
+</div>
+
+</body>
+</html>
