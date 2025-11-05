@@ -134,7 +134,7 @@ app.get("/", (req, res) => {
 
 app.get("/credits", (req, res) => {
   const filePath = path.join(__dirname, "public", "credits.html");
-
+});
 // ===== Global error handlers =====
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
