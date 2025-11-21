@@ -89,18 +89,18 @@ function appendMessage(role, content) {
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const message = chatInput.value.trim();
-  if (!message) return;
-
-  // Clear input immediately
+  // Always clear input immediately
+  const message = chatInput.value;
   chatInput.value = "";
+
+  const trimmedMessage = message.trim();
+  if (!trimmedMessage) return; // prevent empty messages
 
   if (!currentChat) currentChat = createNewChat();
   if (!chats[currentChat]) chats[currentChat] = [];
 
-  // Add user message
-  appendMessage("user", message);
-  chats[currentChat].push({ role: "user", content: message });
+  appendMessage("user", trimmedMessage);
+  chats[currentChat].push({ role: "user", content: trimmedMessage });
   saveChats();
 
   // Show typing indicator
@@ -122,12 +122,10 @@ chatForm.addEventListener("submit", async (e) => {
     let data;
     try {
       data = await res.json();
-    } catch (jsonErr) {
-      console.error("Failed to parse JSON from server:", jsonErr);
+    } catch {
       data = { reply: "⚠️ Invalid server response." };
     }
 
-    // Remove typing indicator and show reply
     typingDiv.classList.remove("typing");
     const reply = data.reply || "⚠️ No reply from server.";
     typingDiv.textContent = reply;
@@ -136,7 +134,6 @@ chatForm.addEventListener("submit", async (e) => {
     saveChats();
 
   } catch (err) {
-    // Always remove typing indicator even if fetch fails
     typingDiv.classList.remove("typing");
     typingDiv.textContent = "⚠️ Server error. Please try again.";
     console.error("Chat fetch error:", err);
