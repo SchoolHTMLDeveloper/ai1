@@ -82,7 +82,7 @@ function appendMessage(role, content) {
 
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
-  return div; // return for typing indicator
+  return div; // return div for typing indicator
 }
 
 /* ========== Chat Form Handler ========== */
@@ -99,6 +99,7 @@ chatForm.addEventListener("submit", async (e) => {
   if (!currentChat) currentChat = createNewChat();
   if (!chats[currentChat]) chats[currentChat] = [];
 
+  // Append user message
   appendMessage("user", trimmedMessage);
   chats[currentChat].push({ role: "user", content: trimmedMessage });
   saveChats();
