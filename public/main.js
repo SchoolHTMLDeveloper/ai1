@@ -4,7 +4,6 @@ const chatInput = document.getElementById("chat-input");
 const chatList = document.getElementById("chat-list");
 const newChatBtn = document.getElementById("new-chat");
 
-
 /* ========== Load chats from cookies ========== */
 let chats = {};
 const saved = document.cookie.split("; ").find(row => row.startsWith("chats="));
@@ -21,6 +20,7 @@ if (Object.keys(chats).length === 0) {
   createNewChat();
 } else {
   currentChat = Object.keys(chats)[0];
+  if (!currentChat) currentChat = createNewChat();
   updateSidebar();
   renderChat();
 }
@@ -59,6 +59,7 @@ function switchChat(id) {
 }
 
 function renderChat() {
+  if (!currentChat || !chats[currentChat]) return;
   chatWindow.innerHTML = "";
   for (const msg of chats[currentChat]) {
     appendMessage(msg.role, msg.content);
@@ -66,12 +67,17 @@ function renderChat() {
 }
 
 function appendMessage(role, content) {
+  if (!chatWindow) return;
   const div = document.createElement("div");
   div.className = role === "user" ? "user-msg" : "ai-msg";
 
-  if (typeof marked !== "undefined") {
-    div.innerHTML = marked.parse(content);
-  } else {
+  try {
+    if (typeof marked !== "undefined") {
+      div.innerHTML = marked.parse(content);
+    } else {
+      div.textContent = content;
+    }
+  } catch {
     div.textContent = content;
   }
 
@@ -86,11 +92,17 @@ chatForm.addEventListener("submit", async (e) => {
   const message = chatInput.value.trim();
   if (!message) return;
 
+  // Clear input first
+  chatInput.value = "";
+
+  // Ensure currentChat exists
+  if (!currentChat) currentChat = createNewChat();
+  if (!chats[currentChat]) chats[currentChat] = [];
+
   // Add user message
   appendMessage("user", message);
   chats[currentChat].push({ role: "user", content: message });
   saveChats();
-  chatInput.value = "";
 
   // Send to backend
   try {
@@ -114,6 +126,7 @@ chatForm.addEventListener("submit", async (e) => {
 
   } catch (err) {
     appendMessage("assistant", "⚠️ Server error. Please try again.");
+    console.error("Chat fetch error:", err);
   }
 });
 
