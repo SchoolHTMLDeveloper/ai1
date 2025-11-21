@@ -5,7 +5,7 @@ const chatList = document.getElementById("chat-list");
 const newChatBtn = document.getElementById("new-chat");
 
 
-// ===== Load chats from cookies =====
+/* ========== Load chats from cookies ========== */
 let chats = {};
 const saved = document.cookie.split("; ").find(row => row.startsWith("chats="));
 if (saved) {
@@ -14,7 +14,7 @@ if (saved) {
   } catch {}
 }
 
-// ===== Initialize current chat =====
+/* ========== Initialize chat ========== */
 let currentChat = null;
 
 if (Object.keys(chats).length === 0) {
@@ -25,7 +25,7 @@ if (Object.keys(chats).length === 0) {
   renderChat();
 }
 
-// ===== Functions =====
+/* ========== Functions ========== */
 function updateSidebar() {
   chatList.innerHTML = "";
   Object.keys(chats).forEach(id => {
@@ -38,7 +38,8 @@ function updateSidebar() {
 }
 
 function saveChats() {
-  document.cookie = `chats=${encodeURIComponent(JSON.stringify(chats))}; path=/; max-age=604800`;
+  document.cookie =
+    `chats=${encodeURIComponent(JSON.stringify(chats))}; path=/; max-age=604800`;
 }
 
 function createNewChat() {
@@ -68,7 +69,6 @@ function appendMessage(role, content) {
   const div = document.createElement("div");
   div.className = role === "user" ? "user-msg" : "ai-msg";
 
-  // ===== Render Markdown instead of raw text =====
   if (typeof marked !== "undefined") {
     div.innerHTML = marked.parse(content);
   } else {
@@ -79,27 +79,20 @@ function appendMessage(role, content) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// ===== Event Handlers =====
+/* ========== Chat Form Handler ========== */
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const message = chatInput.value.trim();
-  if (!message && !fileInput.files.length) return;
+  if (!message) return;
 
-  if (fileInput.files.length > 0) {
-    const fileName = fileInput.files[0].name;
-    appendMessage("user", `[File Uploaded: ${fileName}]`);
-    chats[currentChat].push({ role: "user", content: `[File Uploaded: ${fileName}]` });
-    fileInput.value = "";
-  }
-
-  if (message) {
-    appendMessage("user", message);
-    chats[currentChat].push({ role: "user", content: message });
-    chatInput.value = "";
-  }
-
+  // Add user message
+  appendMessage("user", message);
+  chats[currentChat].push({ role: "user", content: message });
   saveChats();
+  chatInput.value = "";
 
+  // Send to backend
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -114,9 +107,11 @@ chatForm.addEventListener("submit", async (e) => {
 
     const data = await res.json();
     const reply = data.reply || "⚠️ No reply";
+
     appendMessage("assistant", reply);
     chats[currentChat].push({ role: "assistant", content: reply });
     saveChats();
+
   } catch (err) {
     appendMessage("assistant", "⚠️ Server error. Please try again.");
   }
