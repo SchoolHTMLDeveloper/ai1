@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // ===== AI Settings =====
 const API_KEY = process.env.API_KEY;
-const GROQ_MODEL = "openai/gpt-oss-20b"; // Replace with a model you have access to
+const GROQ_MODEL = "llama-3.3-70b-versatile"; // Replace with a model you have access to
 
 if (!API_KEY) console.error("⚠️ KEY is not set in environment variables!");
 
