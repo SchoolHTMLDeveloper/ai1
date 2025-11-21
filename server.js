@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const adminUser = process.env.adminuser;
 const adminPassword = process.env.adminpassword;
 const API_KEY = process.env.API_KEY;
-const GROQ_MODEL = "llama3-8b-8192"; // Example working model
+const GROQ_MODEL = "llama3-8b-8192"; // Replace with your model
 
 if (!API_KEY) console.error("⚠️ API_KEY not set!");
 
@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // ===== AI Toggle =====
 let aiEnabled = true;
 
-// ===== Helper: Admin Check =====
+// ===== Admin Check Middleware =====
 function requireAdmin(req, res, next) {
   if (req.cookies?.admin === "true") return next();
   res.redirect("/admin");
@@ -57,9 +57,15 @@ app.post("/api/chat", async (req, res) => {
       }),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonErr) {
+      console.error("Failed to parse JSON:", jsonErr);
+      return res.json({ reply: "⚠️ Invalid server response" });
+    }
 
-    let reply =
+    const reply =
       data?.choices?.[0]?.message?.content ??
       `⚠️ Groq API error: ${data.error?.message || JSON.stringify(data.error)}`;
 
@@ -71,12 +77,11 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ===== Admin Login Page =====
+// ===== Admin Routes =====
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin-login.html"));
 });
 
-// ===== Admin Login Handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
   if (username === adminUser && password === adminPassword) {
@@ -87,7 +92,6 @@ app.post("/admin-login", (req, res) => {
   }
 });
 
-// ===== Admin Panel =====
 app.get("/admin-panel", requireAdmin, (req, res) => {
   const html = `
     <html>
