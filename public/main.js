@@ -82,7 +82,7 @@ function appendMessage(role, content) {
 
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
-  return div;
+  return div; // return for typing indicator
 }
 
 /* ========== Chat Form Handler ========== */
@@ -119,17 +119,24 @@ chatForm.addEventListener("submit", async (e) => {
       })
     });
 
-    const data = await res.json();
-    const reply = data.reply || "⚠️ No reply";
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonErr) {
+      console.error("Failed to parse JSON from server:", jsonErr);
+      data = { reply: "⚠️ Invalid server response." };
+    }
 
-    // Replace typing message with actual reply
+    // Remove typing indicator and show reply
     typingDiv.classList.remove("typing");
+    const reply = data.reply || "⚠️ No reply from server.";
     typingDiv.textContent = reply;
 
     chats[currentChat].push({ role: "assistant", content: reply });
     saveChats();
 
   } catch (err) {
+    // Always remove typing indicator even if fetch fails
     typingDiv.classList.remove("typing");
     typingDiv.textContent = "⚠️ Server error. Please try again.";
     console.error("Chat fetch error:", err);
