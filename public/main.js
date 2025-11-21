@@ -15,7 +15,6 @@ if (saved) {
 
 /* ========== Initialize chat ========== */
 let currentChat = null;
-
 if (Object.keys(chats).length === 0) {
   createNewChat();
 } else {
@@ -83,6 +82,7 @@ function appendMessage(role, content) {
 
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+  return div;
 }
 
 /* ========== Chat Form Handler ========== */
@@ -92,10 +92,9 @@ chatForm.addEventListener("submit", async (e) => {
   const message = chatInput.value.trim();
   if (!message) return;
 
-  // Clear input first
+  // Clear input immediately
   chatInput.value = "";
 
-  // Ensure currentChat exists
   if (!currentChat) currentChat = createNewChat();
   if (!chats[currentChat]) chats[currentChat] = [];
 
@@ -104,7 +103,10 @@ chatForm.addEventListener("submit", async (e) => {
   chats[currentChat].push({ role: "user", content: message });
   saveChats();
 
-  // Send to backend
+  // Show typing indicator
+  const typingDiv = appendMessage("assistant", "💬 Assistant is typing...");
+  typingDiv.classList.add("typing");
+
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -120,12 +122,16 @@ chatForm.addEventListener("submit", async (e) => {
     const data = await res.json();
     const reply = data.reply || "⚠️ No reply";
 
-    appendMessage("assistant", reply);
+    // Replace typing message with actual reply
+    typingDiv.classList.remove("typing");
+    typingDiv.textContent = reply;
+
     chats[currentChat].push({ role: "assistant", content: reply });
     saveChats();
 
   } catch (err) {
-    appendMessage("assistant", "⚠️ Server error. Please try again.");
+    typingDiv.classList.remove("typing");
+    typingDiv.textContent = "⚠️ Server error. Please try again.";
     console.error("Chat fetch error:", err);
   }
 });
