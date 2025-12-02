@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser"; // added for admin toggle
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,9 +21,37 @@ if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set in environment 
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(cookieParser());
 
 // ===== AI Toggle =====
 let aiEnabled = true;
+
+// ===== Admin IDs for chat toggle =====
+const ADMIN_IDS = ["PUT_ADMIN_COOKIE_ID_HERE"]; // replace with your admin IDs
+
+// ===== Admin Toggle Endpoint for Chat Commands =====
+app.post("/api/admin-toggle", (req, res) => {
+  try {
+    const adminId = req.cookies?.id;
+    const { toggle } = req.body;
+
+    if (!adminId || !ADMIN_IDS.includes(adminId)) {
+      return res.status(403).json({ ok: false, error: "Not admin" });
+    }
+
+    if (toggle !== "on" && toggle !== "off") {
+      return res.status(400).json({ ok: false, error: "Invalid toggle value" });
+    }
+
+    aiEnabled = toggle === "on";
+    console.log(`AI toggled by admin ${adminId}:`, aiEnabled ? "ON" : "OFF");
+
+    res.json({ ok: true, aiEnabled });
+  } catch (err) {
+    console.error("Error in /api/admin-toggle:", err);
+    res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
 
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
@@ -44,7 +73,7 @@ app.post("/api/chat", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
+        model: GROQ_MODEL,
         messages: messages.map(m => ({ role: m.role, content: m.content }))
       }),
     });
