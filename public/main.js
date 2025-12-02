@@ -108,11 +108,7 @@ chatForm.addEventListener("submit", async (e) => {
     return; // stop normal chat sending
   }
 
-  if (fileInput.files.length > 0) {
-    const fileName = fileInput.files[0].name;
-    appendMessage("user", `[File Uploaded: ${fileName}]`);
-    chats[currentChat].push({ role: "user", content: `[File Uploaded: ${fileName}]` });
-    fileInput.value = "";
+
   }
 
   if (message) {
