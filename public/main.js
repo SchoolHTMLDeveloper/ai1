@@ -3,7 +3,6 @@ const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatList = document.getElementById("chat-list");
 const newChatBtn = document.getElementById("new-chat");
-const fileInput = document.getElementById("file-input");
 
 // ===== Load chats from cookies =====
 let chats = {};
