@@ -9,21 +9,13 @@ const fileInput = document.getElementById("file-input");
 let chats = {};
 const saved = document.cookie.split("; ").find(row => row.startsWith("chats="));
 if (saved) {
-  try {
-    chats = JSON.parse(decodeURIComponent(saved.split("=")[1]));
-  } catch {}
+  try { chats = JSON.parse(decodeURIComponent(saved.split("=")[1])); } catch {}
 }
 
 // ===== Initialize current chat =====
 let currentChat = null;
-
-if (Object.keys(chats).length === 0) {
-  createNewChat();
-} else {
-  currentChat = Object.keys(chats)[0];
-  updateSidebar();
-  renderChat();
-}
+if (Object.keys(chats).length === 0) createNewChat();
+else { currentChat = Object.keys(chats)[0]; updateSidebar(); renderChat(); }
 
 // ===== Functions =====
 function updateSidebar() {
@@ -51,17 +43,11 @@ function createNewChat() {
   return id;
 }
 
-function switchChat(id) {
-  currentChat = id;
-  updateSidebar();
-  renderChat();
-}
+function switchChat(id) { currentChat = id; updateSidebar(); renderChat(); }
 
 function renderChat() {
   chatWindow.innerHTML = "";
-  for (const msg of chats[currentChat]) {
-    appendMessage(msg.role, msg.content);
-  }
+  for (const msg of chats[currentChat]) appendMessage(msg.role, msg.content);
 }
 
 // ===== Show user/admin ID on click =====
@@ -75,14 +61,12 @@ function appendMessage(role, content) {
   div.className = role === "user" ? "user-msg" : "ai-msg";
   div.textContent = content;
 
-  // Clickable for user messages to reveal ID
   if (role === "user") {
     div.style.cursor = "pointer";
     div.title = "Click to reveal your ID";
     div.addEventListener("click", () => {
       const myId = getMyId();
-      if (myId) alert(`Your ID: ${myId}`);
-      else alert("No ID cookie found.");
+      alert(myId ? `Your ID: ${myId}` : "No ID cookie found.");
     });
   }
 
@@ -104,7 +88,7 @@ chatForm.addEventListener("submit", async (e) => {
   const message = chatInput.value.trim();
   if (!message && !fileInput.files.length) return;
 
-  // ===== Admin toggle commands =====
+  // Admin toggle commands
   if (message === "/ai-on" || message === "/ai-off") {
     try {
       const res = await fetch("/api/admin-toggle", {
@@ -113,20 +97,14 @@ chatForm.addEventListener("submit", async (e) => {
         body: JSON.stringify({ toggle: message === "/ai-on" ? "on" : "off" })
       });
       const data = await res.json();
-      if (data.ok) {
-        addSystemMessage(`✅ AI turned ${data.aiEnabled ? "ON" : "OFF"}`);
-      } else {
-        addSystemMessage(`❌ Admin toggle failed: ${data.error || "unknown"}`);
-      }
-    } catch (err) {
-      console.error("Admin toggle error:", err);
-      addSystemMessage("❌ Error toggling AI");
-    }
+      addSystemMessage(data.ok ? `✅ AI turned ${data.aiEnabled ? "ON" : "OFF"}` :
+        `❌ Admin toggle failed: ${data.error || "unknown"}`);
+    } catch { addSystemMessage("❌ Error toggling AI"); }
     chatInput.value = "";
     return;
   }
 
-  // ===== File upload =====
+  // File upload
   if (fileInput.files.length > 0) {
     const fileName = fileInput.files[0].name;
     appendMessage("user", `[File Uploaded: ${fileName}]`);
@@ -134,7 +112,7 @@ chatForm.addEventListener("submit", async (e) => {
     fileInput.value = "";
   }
 
-  // ===== Normal message =====
+  // Normal message
   if (message) {
     appendMessage("user", message);
     chats[currentChat].push({ role: "user", content: message });
@@ -143,7 +121,7 @@ chatForm.addEventListener("submit", async (e) => {
 
   saveChats();
 
-  // ===== Send to Groq AI =====
+  // Send to Groq AI
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -155,16 +133,14 @@ chatForm.addEventListener("submit", async (e) => {
         ]
       })
     });
-
     const data = await res.json();
     const reply = data.reply || "⚠️ No reply";
     appendMessage("assistant", reply);
     chats[currentChat].push({ role: "assistant", content: reply });
     saveChats();
-  } catch (err) {
+  } catch {
     appendMessage("assistant", "⚠️ Server error. Please try again.");
   }
 });
 
-// ===== New chat button =====
 newChatBtn.onclick = createNewChat;
