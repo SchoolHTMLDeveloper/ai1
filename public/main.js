@@ -3,6 +3,7 @@ const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatList = document.getElementById("chat-list");
 const newChatBtn = document.getElementById("new-chat");
+const fileInput = document.getElementById("file-input");
 
 // ===== Load chats from cookies =====
 let chats = {};
@@ -63,15 +64,32 @@ function renderChat() {
   }
 }
 
+// ===== Show user/admin ID on click =====
+function getMyId() {
+  const match = document.cookie.match(/(?:^|; )id=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function appendMessage(role, content) {
   const div = document.createElement("div");
   div.className = role === "user" ? "user-msg" : "ai-msg";
   div.textContent = content;
+
+  // Clickable for user messages to reveal ID
+  if (role === "user") {
+    div.style.cursor = "pointer";
+    div.title = "Click to reveal your ID";
+    div.addEventListener("click", () => {
+      const myId = getMyId();
+      if (myId) alert(`Your ID: ${myId}`);
+      else alert("No ID cookie found.");
+    });
+  }
+
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// ===== Add system messages =====
 function addSystemMessage(content) {
   const div = document.createElement("div");
   div.className = "system-msg";
@@ -86,7 +104,7 @@ chatForm.addEventListener("submit", async (e) => {
   const message = chatInput.value.trim();
   if (!message && !fileInput.files.length) return;
 
-  // ===== Admin commands: /ai-on and /ai-off =====
+  // ===== Admin toggle commands =====
   if (message === "/ai-on" || message === "/ai-off") {
     try {
       const res = await fetch("/api/admin-toggle", {
@@ -105,9 +123,10 @@ chatForm.addEventListener("submit", async (e) => {
       addSystemMessage("❌ Error toggling AI");
     }
     chatInput.value = "";
-    return; // stop normal chat sending
+    return;
   }
 
+  // ===== File upload =====
   if (fileInput.files.length > 0) {
     const fileName = fileInput.files[0].name;
     appendMessage("user", `[File Uploaded: ${fileName}]`);
@@ -115,6 +134,7 @@ chatForm.addEventListener("submit", async (e) => {
     fileInput.value = "";
   }
 
+  // ===== Normal message =====
   if (message) {
     appendMessage("user", message);
     chats[currentChat].push({ role: "user", content: message });
@@ -123,6 +143,7 @@ chatForm.addEventListener("submit", async (e) => {
 
   saveChats();
 
+  // ===== Send to Groq AI =====
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -145,4 +166,5 @@ chatForm.addEventListener("submit", async (e) => {
   }
 });
 
+// ===== New chat button =====
 newChatBtn.onclick = createNewChat;
