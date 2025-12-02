@@ -72,11 +72,42 @@ function appendMessage(role, content) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
+// ===== Add system messages =====
+function addSystemMessage(content) {
+  const div = document.createElement("div");
+  div.className = "system-msg";
+  div.textContent = content;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
 // ===== Event Handlers =====
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const message = chatInput.value.trim();
   if (!message && !fileInput.files.length) return;
+
+  // ===== Admin commands: /ai-on and /ai-off =====
+  if (message === "/ai-on" || message === "/ai-off") {
+    try {
+      const res = await fetch("/api/admin-toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toggle: message === "/ai-on" ? "on" : "off" })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        addSystemMessage(`✅ AI turned ${data.aiEnabled ? "ON" : "OFF"}`);
+      } else {
+        addSystemMessage(`❌ Admin toggle failed: ${data.error || "unknown"}`);
+      }
+    } catch (err) {
+      console.error("Admin toggle error:", err);
+      addSystemMessage("❌ Error toggling AI");
+    }
+    chatInput.value = "";
+    return; // stop normal chat sending
+  }
 
   if (fileInput.files.length > 0) {
     const fileName = fileInput.files[0].name;
