@@ -3,7 +3,8 @@ import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import cookieParser from "cookie-parser"; // added for admin toggle
+import cookieParser from "cookie-parser";
+import { v4 as uuidv4 } from "uuid"; // npm install uuid
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,9 +14,9 @@ const PORT = process.env.PORT || 3000;
 
 // ===== Groq Settings =====
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = "openai/gpt-oss-20b"; // Replace with a model you have access to
+const GROQ_MODEL = "openai/gpt-oss-20b";
 
-if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set in environment variables!");
+if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set!");
 
 // ===== Middleware =====
 app.use(bodyParser.json());
@@ -23,13 +24,24 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
 
+// ===== Auto-assign unique ID =====
+app.use((req, res, next) => {
+  if (!req.cookies?.id) {
+    const newId = uuidv4();
+    res.cookie("id", newId, { httpOnly: false, path: "/" });
+    req.cookies.id = newId;
+    console.log("Assigned new user ID:", newId);
+  }
+  next();
+});
+
 // ===== AI Toggle =====
 let aiEnabled = true;
 
-// ===== Admin IDs for chat toggle =====
-const ADMIN_IDS = ["PUT_ADMIN_COOKIE_ID_HERE"]; // replace with your admin IDs
+// ===== Admin IDs =====
+const ADMIN_IDS = ["PUT_ADMIN_UUID_HERE"]; // replace with your admin UUID(s)
 
-// ===== Admin Toggle Endpoint for Chat Commands =====
+// ===== Admin toggle endpoint =====
 app.post("/api/admin-toggle", (req, res) => {
   try {
     const adminId = req.cookies?.id;
@@ -64,8 +76,6 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
 
-    console.log("Sending messages to Groq API:", messages);
-
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,8 +89,6 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const data = await response.json();
-    console.log("Groq API response:", JSON.stringify(data, null, 2));
-
     let reply = "⚠️ No reply";
     if (data?.choices && data.choices[0]?.message?.content) {
       reply = data.choices[0].message.content;
@@ -99,28 +107,26 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ===== Admin Login Page =====
+// ===== Admin login page =====
 app.get("/admin", (req, res) => {
-  const filePath = path.join(__dirname, "public", "admin-login.html");
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error("Error serving admin login page:", err);
-      res.status(500).send("⚠️ Could not load admin login page. Check server logs.");
-    }
+  res.sendFile(path.join(__dirname, "public", "admin-login.html"), (err) => {
+    if (err) console.error("Error serving admin login page:", err);
   });
 });
 
-// ===== Admin Login Handler =====
+// ===== Admin login handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
   if (username === "Braxton" && password === "OGMSAdmin") {
+    // optional: set a specific admin ID
+    // res.cookie("id", "YOUR_ADMIN_UUID", { httpOnly: false, path: "/" });
     res.redirect("/admin-panel");
   } else {
     res.status(401).send("⚠️ Invalid credentials.");
   }
 });
 
-// ===== Admin Panel (Toggle AI) =====
+// ===== Admin panel =====
 app.get("/admin-panel", (req, res) => {
   const html = `
     <html>
@@ -145,25 +151,20 @@ app.get("/admin-panel", (req, res) => {
 
 app.post("/toggle-ai", (req, res) => {
   aiEnabled = !aiEnabled;
-  console.log("AI enabled:", aiEnabled);
   res.redirect("/admin-panel");
 });
 
-// ===== Serve homepage =====
+// ===== Homepage =====
 app.get("/", (req, res) => {
-  const filePath = path.join(__dirname, "public", "index.html");
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error("Error serving index page:", err);
-      res.status(500).send("⚠️ Could not load homepage. Check server logs.");
-    }
+  res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
+    if (err) console.error("Error serving homepage:", err);
   });
 });
 
-// ===== Global error handlers =====
+// ===== Errors =====
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
-  res.status(500).send("⚠️ Internal Server Error. Check server console.");
+  res.status(500).send("⚠️ Internal Server Error");
 });
 
 process.on("unhandledRejection", (reason, promise) => {
