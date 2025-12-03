@@ -45,7 +45,7 @@ app.use((req, res, next) => {
 let aiEnabled = true;
 
 // ===== Admin IDs =====
-const ADMIN_IDS = ["PUT_ADMIN_UUID_HERE"]; // replace with your admin UUID(s)
+const ADMIN_IDS = ["8f3e-41b1-b2ae-b925"]; // replace with your admin UUID(s)
 
 // ===== Admin toggle endpoint =====
 app.post("/api/admin-toggle", (req, res) => {
