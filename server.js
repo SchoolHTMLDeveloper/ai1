@@ -158,6 +158,19 @@ app.post("/toggle-ai", (req, res) => {
   res.redirect("/admin-panel");
 });
 
+// ===== Frontend Toggle API =====
+app.post("/api/admin-toggle", (req, res) => {
+  const { toggle } = req.body;
+
+  if (toggle === "on") aiEnabled = true;
+  else if (toggle === "off") aiEnabled = false;
+  else return res.json({ ok: false, error: "Invalid toggle command" });
+
+  console.log("AI toggled:", aiEnabled);
+  res.json({ ok: true, aiEnabled });
+});
+
+
 // ===== Homepage =====
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
