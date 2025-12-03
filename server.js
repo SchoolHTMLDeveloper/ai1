@@ -1,8 +1,9 @@
 import express from "express";
-import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
+import session from "express-session";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,17 +18,47 @@ const GROQ_MODEL = "openai/gpt-oss-20b";
 if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set!");
 
 // ===== Middleware =====
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ===== AI Toggle =====
-let aiEnabled = true;
+app.use(
+  session({
+    secret: "supersecretkey123", // change for production
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // set true if using HTTPS
+  })
+);
 
-// ===== Admin IDs =====
-const adminIds = new Set([
-  "8f3e-41b1-b2ae-b925" // replace with your actual ID from clicking a user message
-]);
+// ===== Persistent AI Toggle =====
+const AI_STATE_FILE = path.join(__dirname, "ai-state.json");
+
+let aiEnabled = true;
+if (fs.existsSync(AI_STATE_FILE)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(AI_STATE_FILE, "utf-8"));
+    aiEnabled = !!saved.aiEnabled;
+  } catch (err) {
+    console.error("Error reading AI state file:", err);
+  }
+}
+
+function saveAiState() {
+  fs.writeFileSync(AI_STATE_FILE, JSON.stringify({ aiEnabled }), "utf-8");
+}
+
+// ===== Admin Credentials =====
+const ADMIN_USERNAME = "Braxton";
+const ADMIN_PASSWORD = "OGMSAdmin";
+
+// ===== Helper Middleware =====
+function requireAdmin(req, res, next) {
+  if (!req.session.isAdmin) {
+    return res.status(403).send("❌ Not authorized");
+  }
+  next();
+}
 
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
@@ -40,18 +71,25 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
 
+    // Validate message roles
+    const validRoles = ["user", "assistant", "system"];
+    for (const msg of messages) {
+      if (!msg.role || !validRoles.includes(msg.role) || !msg.content) {
+        return res.status(400).json({ reply: "⚠️ Invalid message format" });
+      }
+    }
+
     console.log("Sending messages to Groq API:", messages);
 
-    // ✅ Correct Groq endpoint
     const response = await fetch("https://api.groq.com/v1/openai/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: GROQ_MODEL,
-        messages: messages.map(m => ({ role: m.role, content: m.content }))
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
       }),
     });
 
@@ -67,27 +105,10 @@ app.post("/api/chat", async (req, res) => {
     }
 
     res.json({ reply });
-
   } catch (err) {
     console.error("Chat API exception:", err);
     res.status(500).json({ reply: "⚠️ Server error. Check console." });
   }
-});
-
-// ===== Admin Toggle API =====
-app.post("/api/admin-toggle", (req, res) => {
-  const userId = req.headers["x-user-id"];
-  if (!adminIds.has(userId)) {
-    return res.json({ ok: false, error: "❌ Not authorized" });
-  }
-
-  const { toggle } = req.body;
-  if (toggle === "on") aiEnabled = true;
-  else if (toggle === "off") aiEnabled = false;
-  else return res.json({ ok: false, error: "Invalid toggle command" });
-
-  console.log("AI toggled by admin:", userId, aiEnabled);
-  res.json({ ok: true, aiEnabled });
 });
 
 // ===== Admin Login Page =====
@@ -104,7 +125,8 @@ app.get("/admin", (req, res) => {
 // ===== Admin Login Handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
-  if (username === "Braxton" && password === "OGMSAdmin") {
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    req.session.isAdmin = true;
     res.redirect("/admin-panel");
   } else {
     res.status(401).send("⚠️ Invalid credentials.");
@@ -112,7 +134,7 @@ app.post("/admin-login", (req, res) => {
 });
 
 // ===== Admin Panel =====
-app.get("/admin-panel", (req, res) => {
+app.get("/admin-panel", requireAdmin, (req, res) => {
   const html = `
     <html>
       <head>
@@ -128,16 +150,28 @@ app.get("/admin-panel", (req, res) => {
         <form method="POST" action="/toggle-ai">
           <button type="submit">${aiEnabled ? "Disable AI" : "Enable AI"}</button>
         </form>
+        <form method="POST" action="/admin-logout">
+          <button type="submit">Logout</button>
+        </form>
       </body>
     </html>
   `;
   res.send(html);
 });
 
-app.post("/toggle-ai", (req, res) => {
+// ===== Toggle AI =====
+app.post("/toggle-ai", requireAdmin, (req, res) => {
   aiEnabled = !aiEnabled;
+  saveAiState();
   console.log("AI enabled:", aiEnabled);
   res.redirect("/admin-panel");
+});
+
+// ===== Admin Logout =====
+app.post("/admin-logout", requireAdmin, (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/admin");
+  });
 });
 
 // ===== Serve homepage =====
@@ -151,7 +185,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// ===== Global error handlers =====
+// ===== Global Error Handlers =====
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
   res.status(500).send("⚠️ Internal Server Error. Check server console.");
@@ -165,7 +199,7 @@ process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception thrown:", err);
 });
 
-// ===== Start server =====
+// ===== Start Server =====
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
