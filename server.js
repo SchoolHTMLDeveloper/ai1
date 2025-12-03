@@ -12,9 +12,9 @@ const PORT = process.env.PORT || 3000;
 
 // ===== Groq Settings =====
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = "openai/gpt-oss-20b"; // Replace with a model you have access to
+const GROQ_MODEL = "openai/gpt-oss-20b";
 
-if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set in environment variables!");
+if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set!");
 
 // ===== Middleware =====
 app.use(bodyParser.json());
@@ -23,6 +23,11 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // ===== AI Toggle =====
 let aiEnabled = true;
+
+// ===== Admin IDs =====
+const adminIds = new Set([
+  "YOUR_ADMIN_ID_HERE" // replace with your actual ID from clicking a user message
+]);
 
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
@@ -72,13 +77,17 @@ app.post("/api/chat", async (req, res) => {
 
 // ===== Admin Toggle API =====
 app.post("/api/admin-toggle", (req, res) => {
-  const { toggle } = req.body;
+  const userId = req.headers["x-user-id"];
+  if (!adminIds.has(userId)) {
+    return res.json({ ok: false, error: "❌ Not authorized" });
+  }
 
+  const { toggle } = req.body;
   if (toggle === "on") aiEnabled = true;
   else if (toggle === "off") aiEnabled = false;
   else return res.json({ ok: false, error: "Invalid toggle command" });
 
-  console.log("AI toggled:", aiEnabled);
+  console.log("AI toggled by admin:", userId, aiEnabled);
   res.json({ ok: true, aiEnabled });
 });
 
