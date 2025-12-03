@@ -26,7 +26,7 @@ let aiEnabled = true;
 
 // ===== Admin IDs =====
 const adminIds = new Set([
-  "YOUR_ADMIN_ID_HERE" // replace with your actual ID from clicking a user message
+  "8f3e-41b1-b2ae-b925" // replace with your actual ID from clicking a user message
 ]);
 
 // ===== Chat API =====
