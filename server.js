@@ -42,7 +42,8 @@ app.post("/api/chat", async (req, res) => {
 
     console.log("Sending messages to Groq API:", messages);
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // ✅ Correct Groq endpoint
+    const response = await fetch("https://api.groq.com/v1/openai/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${GROQ_API_KEY}`,
@@ -57,14 +58,12 @@ app.post("/api/chat", async (req, res) => {
     const data = await response.json();
     console.log("Groq API response:", JSON.stringify(data, null, 2));
 
-    let reply = "⚠️ No reply";
+    let reply = "⚠️ No reply from Groq API";
     if (data?.choices && data.choices[0]?.message?.content) {
       reply = data.choices[0].message.content;
     } else if (data?.error) {
       console.error("Groq API error:", data.error);
       reply = `⚠️ Groq API error: ${data.error.message}`;
-    } else {
-      console.error("Unexpected Groq API response:", data);
     }
 
     res.json({ reply });
@@ -112,7 +111,7 @@ app.post("/admin-login", (req, res) => {
   }
 });
 
-// ===== Admin Panel (Toggle AI) =====
+// ===== Admin Panel =====
 app.get("/admin-panel", (req, res) => {
   const html = `
     <html>
