@@ -1,3 +1,9 @@
+// ===== Auto-assign persistent user/admin ID =====
+if (!document.cookie.includes("id=")) {
+  const newId = crypto.randomUUID();
+  document.cookie = `id=${newId}; path=/; max-age=31536000`; // 1 year
+}
+
 const chatWindow = document.getElementById("chat-window");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
@@ -50,23 +56,24 @@ function renderChat() {
   for (const msg of chats[currentChat]) appendMessage(msg.role, msg.content);
 }
 
-// ===== Show user/admin ID on click =====
+// ===== Get my ID from cookie =====
 function getMyId() {
   const match = document.cookie.match(/(?:^|; )id=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// ===== Append message =====
 function appendMessage(role, content) {
   const div = document.createElement("div");
   div.className = role === "user" ? "user-msg" : "ai-msg";
   div.textContent = content;
 
+  // Click user messages to show ID
   if (role === "user") {
     div.style.cursor = "pointer";
     div.title = "Click to reveal your ID";
     div.addEventListener("click", () => {
-      const myId = getMyId();
-      alert(myId ? `Your ID: ${myId}` : "No ID cookie found.");
+      alert(`Your ID: ${getMyId()}`);
     });
   }
 
@@ -96,10 +103,18 @@ chatForm.addEventListener("submit", async (e) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toggle: message === "/ai-on" ? "on" : "off" })
       });
+
       const data = await res.json();
-      addSystemMessage(data.ok ? `✅ AI turned ${data.aiEnabled ? "ON" : "OFF"}` :
-        `❌ Admin toggle failed: ${data.error || "unknown"}`);
-    } catch { addSystemMessage("❌ Error toggling AI"); }
+      addSystemMessage(
+        data.ok
+          ? `✅ AI turned ${data.aiEnabled ? "ON" : "OFF"}`
+          : `❌ Admin toggle failed: ${data.error || "unknown"}`
+      );
+
+    } catch {
+      addSystemMessage("❌ Error toggling AI");
+    }
+
     chatInput.value = "";
     return;
   }
@@ -133,11 +148,13 @@ chatForm.addEventListener("submit", async (e) => {
         ]
       })
     });
+
     const data = await res.json();
     const reply = data.reply || "⚠️ No reply";
     appendMessage("assistant", reply);
     chats[currentChat].push({ role: "assistant", content: reply });
     saveChats();
+
   } catch {
     appendMessage("assistant", "⚠️ Server error. Please try again.");
   }
