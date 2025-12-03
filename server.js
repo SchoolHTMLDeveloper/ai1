@@ -3,7 +3,6 @@ import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import cookieParser from "cookie-parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,63 +12,17 @@ const PORT = process.env.PORT || 3000;
 
 // ===== Groq Settings =====
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = "openai/gpt-oss-20b";
+const GROQ_MODEL = "openai/gpt-oss-20b"; // Replace with a model you have access to
 
-if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set!");
+if (!GROQ_API_KEY) console.error("⚠️ GROQ_API_KEY is not set in environment variables!");
 
 // ===== Middleware =====
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
-app.use(cookieParser());
-
-// ===== Simple ID generator =====
-function generateId() {
-  return 'xxxx-xxxx-xxxx-xxxx'.replace(/[x]/g, () =>
-    ((Math.random() * 16) | 0).toString(16)
-  );
-}
-
-// ===== Auto-assign unique ID =====
-app.use((req, res, next) => {
-  if (!req.cookies?.id) {
-    const newId = generateId();
-    res.cookie("id", newId, { httpOnly: false, path: "/" });
-    req.cookies.id = newId;
-    console.log("Assigned new user ID:", newId);
-  }
-  next();
-});
 
 // ===== AI Toggle =====
 let aiEnabled = true;
-
-// ===== Admin IDs =====
-const ADMIN_IDS = ["8f3e-41b1-b2ae-b925"]; // replace with your admin UUID(s)
-
-// ===== Admin toggle endpoint =====
-app.post("/api/admin-toggle", (req, res) => {
-  try {
-    const adminId = req.cookies?.id;
-    const { toggle } = req.body;
-
-    if (!adminId || !ADMIN_IDS.includes(adminId)) {
-      return res.status(403).json({ ok: false, error: "Not admin" });
-    }
-
-    if (toggle !== "on" && toggle !== "off") {
-      return res.status(400).json({ ok: false, error: "Invalid toggle value" });
-    }
-
-    aiEnabled = toggle === "on";
-    console.log(`AI toggled by admin ${adminId}:`, aiEnabled ? "ON" : "OFF");
-
-    res.json({ ok: true, aiEnabled });
-  } catch (err) {
-    console.error("Error in /api/admin-toggle:", err);
-    res.status(500).json({ ok: false, error: "Server error" });
-  }
-});
 
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
@@ -81,6 +34,8 @@ app.post("/api/chat", async (req, res) => {
       console.error("Invalid messages payload:", req.body);
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
+
+    console.log("Sending messages to Groq API:", messages);
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -95,6 +50,8 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const data = await response.json();
+    console.log("Groq API response:", JSON.stringify(data, null, 2));
+
     let reply = "⚠️ No reply";
     if (data?.choices && data.choices[0]?.message?.content) {
       reply = data.choices[0].message.content;
@@ -113,14 +70,30 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ===== Admin login page =====
+// ===== Admin Toggle API =====
+app.post("/api/admin-toggle", (req, res) => {
+  const { toggle } = req.body;
+
+  if (toggle === "on") aiEnabled = true;
+  else if (toggle === "off") aiEnabled = false;
+  else return res.json({ ok: false, error: "Invalid toggle command" });
+
+  console.log("AI toggled:", aiEnabled);
+  res.json({ ok: true, aiEnabled });
+});
+
+// ===== Admin Login Page =====
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-login.html"), (err) => {
-    if (err) console.error("Error serving admin login page:", err);
+  const filePath = path.join(__dirname, "public", "admin-login.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Error serving admin login page:", err);
+      res.status(500).send("⚠️ Could not load admin login page. Check server logs.");
+    }
   });
 });
 
-// ===== Admin login handler =====
+// ===== Admin Login Handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
   if (username === "Braxton" && password === "OGMSAdmin") {
@@ -130,7 +103,7 @@ app.post("/admin-login", (req, res) => {
   }
 });
 
-// ===== Admin panel =====
+// ===== Admin Panel (Toggle AI) =====
 app.get("/admin-panel", (req, res) => {
   const html = `
     <html>
@@ -155,33 +128,25 @@ app.get("/admin-panel", (req, res) => {
 
 app.post("/toggle-ai", (req, res) => {
   aiEnabled = !aiEnabled;
+  console.log("AI enabled:", aiEnabled);
   res.redirect("/admin-panel");
 });
 
-// ===== Frontend Toggle API =====
-app.post("/api/admin-toggle", (req, res) => {
-  const { toggle } = req.body;
-
-  if (toggle === "on") aiEnabled = true;
-  else if (toggle === "off") aiEnabled = false;
-  else return res.json({ ok: false, error: "Invalid toggle command" });
-
-  console.log("AI toggled:", aiEnabled);
-  res.json({ ok: true, aiEnabled });
-});
-
-
-// ===== Homepage =====
+// ===== Serve homepage =====
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
-    if (err) console.error("Error serving homepage:", err);
+  const filePath = path.join(__dirname, "public", "index.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Error serving index page:", err);
+      res.status(500).send("⚠️ Could not load homepage. Check server logs.");
+    }
   });
 });
 
-// ===== Errors =====
+// ===== Global error handlers =====
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
-  res.status(500).send("⚠️ Internal Server Error");
+  res.status(500).send("⚠️ Internal Server Error. Check server console.");
 });
 
 process.on("unhandledRejection", (reason, promise) => {
