@@ -147,7 +147,7 @@ chatForm.addEventListener("submit", async (e) => {
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json",  "x-user-id": myId },
       body: JSON.stringify({
         messages: [
           { role: "system", content: "You are OGMSAI, a helpful assistant." },
