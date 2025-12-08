@@ -3,6 +3,7 @@ function getOrCreateId() {
   let id = document.cookie.split("; ").find(r => r.startsWith("id="));
   if (id) return id.split("=")[1];
 
+  // FIXED admin ID
   const newId = "7da47027-38ea-4054-a66e-c4e0d9d8d54c";
   document.cookie = `id=${newId}; path=/; max-age=31536000`;
   return newId;
@@ -11,6 +12,7 @@ function getOrCreateId() {
 const myId = getOrCreateId();
 console.log("Your ID:", myId);
 
+// ===== Chat elements =====
 const chatWindow = document.getElementById("chat-window");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
@@ -21,11 +23,16 @@ const fileInput = document.getElementById("file-input");
 // ===== Load chats =====
 let chats = {};
 const saved = document.cookie.split("; ").find(row => row.startsWith("chats="));
-if (saved) { try { chats = JSON.parse(decodeURIComponent(saved.split("=")[1])); } catch {} }
+if (saved) {
+  try { chats = JSON.parse(decodeURIComponent(saved.split("=")[1])); } catch {}
+}
 
+// ===== Init chat =====
 let currentChat = Object.keys(chats)[0] || createNewChat();
-updateSidebar(); renderChat();
+updateSidebar();
+renderChat();
 
+// ===== Functions =====
 function updateSidebar() {
   chatList.innerHTML = "";
   Object.keys(chats).forEach(id => {
@@ -45,7 +52,9 @@ function createNewChat() {
   const id = `Chat ${Object.keys(chats).length + 1}`;
   chats[id] = [];
   currentChat = id;
-  updateSidebar(); renderChat(); saveChats();
+  updateSidebar();
+  renderChat();
+  saveChats();
   return id;
 }
 
@@ -88,7 +97,7 @@ function addSystemMessage(content) {
 }
 
 // ===== Event Handlers =====
-chatForm.addEventListener("submit", async e => {
+chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const message = chatInput.value.trim();
   if (!message && !fileInput.files.length) return;
@@ -117,6 +126,7 @@ chatForm.addEventListener("submit", async e => {
     fileInput.value = "";
   }
 
+  // Normal message
   if (message) {
     appendMessage("user", message);
     chats[currentChat].push({ role: "user", content: message });
@@ -125,15 +135,19 @@ chatForm.addEventListener("submit", async e => {
 
   saveChats();
 
-  // Send to server
+  // Send to AI
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-user-id": myId },
       body: JSON.stringify({
-        messages: [{ role: "system", content: "You are OGMSAI, a helpful assistant." }, ...chats[currentChat]]
+        messages: [
+          { role: "system", content: "You are OGMSAI, a helpful assistant." },
+          ...chats[currentChat]
+        ]
       })
     });
+
     const data = await res.json();
     const reply = data.reply || "⚠️ No reply";
     appendMessage("assistant", reply);
