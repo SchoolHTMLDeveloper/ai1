@@ -1,22 +1,23 @@
-// ===== AUTO-ASSIGN FIXED ADMIN ID =====
+// ===== AUTO-ASSIGN USER ID =====
 function getOrCreateId() {
   let id = document.cookie.split("; ").find(r => r.startsWith("id="));
-
   if (id) return id.split("=")[1];
 
-  // YOUR FIXED ID:
-  const newId = "7da47027-38ea-4054-a66e-c4e0d9d8d54c";
+  // Fixed admin ID for you
+  const adminId = "7da47027-38ea-4054-a66e-c4e0d9d8d54c";
+
+  // Only assign admin ID if you are on your admin browser
+  const isAdminBrowser = window.location.hostname === "localhost"; // or add a secret prompt
+  const newId = isAdminBrowser ? adminId : crypto.randomUUID();
 
   document.cookie = `id=${newId}; path=/; max-age=31536000`;
   return newId;
 }
 
 const myId = getOrCreateId();
-
 console.log("Your ID:", myId);
 
-// ========== rest of your existing code unchanged ==========
-
+// ===== Chat setup =====
 const chatWindow = document.getElementById("chat-window");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
@@ -24,14 +25,13 @@ const chatList = document.getElementById("chat-list");
 const newChatBtn = document.getElementById("new-chat");
 const fileInput = document.getElementById("file-input");
 
-// ===== Load chats from cookies =====
+// Load chats from cookies
 let chats = {};
 const saved = document.cookie.split("; ").find(row => row.startsWith("chats="));
 if (saved) {
   try { chats = JSON.parse(decodeURIComponent(saved.split("=")[1])); } catch {}
 }
 
-// ===== Initialize current chat =====
 let currentChat = null;
 if (Object.keys(chats).length === 0) createNewChat();
 else { currentChat = Object.keys(chats)[0]; updateSidebar(); renderChat(); }
@@ -147,7 +147,10 @@ chatForm.addEventListener("submit", async (e) => {
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json",  "x-user-id": myId },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": myId
+      },
       body: JSON.stringify({
         messages: [
           { role: "system", content: "You are OGMSAI, a helpful assistant." },
