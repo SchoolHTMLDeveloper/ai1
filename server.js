@@ -32,7 +32,6 @@ app.post("/api/chat", async (req, res) => {
   try {
     const userId = req.headers["x-user-id"];
 
-    // Block AI for non-admins when disabled
     if (!aiEnabled && !ADMIN_IDS.has(userId)) {
       return res.json({ reply: "⚠️ AI is currently disabled by admin." });
     }
@@ -82,26 +81,14 @@ app.post("/api/admin-toggle", (req, res) => {
 // ===== Serve homepage =====
 app.get("/", (req, res) => {
   const filePath = path.join(__dirname, "public", "index.html");
-  res.sendFile(filePath, err => {
-    if (err) {
-      console.error("Error serving index:", err);
-      res.status(500).send("⚠️ Could not load homepage");
-    }
-  });
+  res.sendFile(filePath);
 });
 
-// ===== Serve admin login =====
+// ===== Admin pages =====
 app.get("/admin", (req, res) => {
-  const filePath = path.join(__dirname, "public", "admin-login.html");
-  res.sendFile(filePath, err => {
-    if (err) {
-      console.error("Error serving admin login:", err);
-      res.status(500).send("⚠️ Could not load admin login page");
-    }
-  });
+  res.sendFile(path.join(__dirname, "public", "admin-login.html"));
 });
 
-// ===== Admin login handler =====
 app.post("/admin-login", (req, res) => {
   const { username, password } = req.body;
   if (username === "Braxton" && password === "OGMSAdmin") {
@@ -111,17 +98,10 @@ app.post("/admin-login", (req, res) => {
   }
 });
 
-// ===== Admin panel =====
 app.get("/admin-panel", (req, res) => {
-  const html = `
+  res.send(`
     <html>
-      <head>
-        <title>Admin Panel</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 2rem; }
-          button { padding: 0.5rem 1rem; font-size: 1rem; }
-        </style>
-      </head>
+      <head><title>Admin Panel</title></head>
       <body>
         <h1>Admin Panel</h1>
         <p>AI is currently: <strong>${aiEnabled ? "Enabled" : "Disabled"}</strong></p>
@@ -130,31 +110,22 @@ app.get("/admin-panel", (req, res) => {
         </form>
       </body>
     </html>
-  `;
-  res.send(html);
+  `);
 });
 
 app.post("/toggle-ai", (req, res) => {
   aiEnabled = !aiEnabled;
-  console.log("AI enabled:", aiEnabled);
   res.redirect("/admin-panel");
 });
 
-// ===== Global error handlers =====
+// ===== Errors =====
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).send("⚠️ Internal Server Error");
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection:", reason, promise);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
-});
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
 
 // ===== Start server =====
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
