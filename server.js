@@ -24,15 +24,16 @@ app.use(express.static(path.join(__dirname, "public")));
 // ===== AI Toggle =====
 let aiEnabled = true;
 
-// ===== ADMIN IDS =====
-const adminIds = new Set([
-  "7da47027-38ea-4054-a66e-c4e0d9d8d54c" // ← YOUR ID
-]);
+// ===== Admins =====
+const ADMIN_IDS = new Set(["7da47027-38ea-4054-a66e-c4e0d9d8d54c"]);
 
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
   try {
-    if (!aiEnabled) {
+    const userId = req.headers["x-user-id"];
+
+    // Block AI for non-admins when disabled
+    if (!aiEnabled && !ADMIN_IDS.has(userId)) {
       return res.json({ reply: "⚠️ AI is currently disabled by admin." });
     }
 
@@ -41,46 +42,119 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/v1/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
-        messages
-      }),
+        model: GROQ_MODEL,
+        messages: messages.map(m => ({ role: m.role, content: m.content }))
+      })
     });
 
     const data = await response.json();
-
-    let reply = "⚠️ No reply";
-    if (data?.choices?.[0]?.message?.content) {
-      reply = data.choices[0].message.content;
-    } else if (data?.error) {
-      reply = `⚠️ Groq API error: ${data.error.message}`;
-    }
+    const reply = data?.choices?.[0]?.message?.content || "⚠️ No reply";
 
     res.json({ reply });
 
   } catch (err) {
-    res.status(500).json({ reply: "⚠️ Server error" });
+    console.error("Chat API error:", err);
+    res.status(500).json({ reply: "⚠️ Server error. Check console." });
   }
 });
 
-// ===== Admin Toggle API =====
+// ===== Admin toggle API =====
 app.post("/api/admin-toggle", (req, res) => {
   const userId = req.headers["x-user-id"];
+  if (!ADMIN_IDS.has(userId)) return res.status(403).json({ ok: false, error: "Not authorized" });
 
-  if (!adminIds.has(userId)) {
-    return res.status(403).json({ ok: false, error: "Not an admin" });
-  }
+  const { toggle } = req.body;
+  if (toggle === "on") aiEnabled = true;
+  else if (toggle === "off") aiEnabled = false;
+  else return res.status(400).json({ ok: false, error: "Invalid toggle value" });
 
-  aiEnabled = req.body.toggle === "on";
-  console.log("AI Enabled:", aiEnabled);
-
-  return res.json({ ok: true, aiEnabled });
+  console.log(`AI toggled by admin ${userId}: ${aiEnabled ? "ON" : "OFF"}`);
+  res.json({ ok: true, aiEnabled });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ===== Serve homepage =====
+app.get("/", (req, res) => {
+  const filePath = path.join(__dirname, "public", "index.html");
+  res.sendFile(filePath, err => {
+    if (err) {
+      console.error("Error serving index:", err);
+      res.status(500).send("⚠️ Could not load homepage");
+    }
+  });
+});
+
+// ===== Serve admin login =====
+app.get("/admin", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-login.html");
+  res.sendFile(filePath, err => {
+    if (err) {
+      console.error("Error serving admin login:", err);
+      res.status(500).send("⚠️ Could not load admin login page");
+    }
+  });
+});
+
+// ===== Admin login handler =====
+app.post("/admin-login", (req, res) => {
+  const { username, password } = req.body;
+  if (username === "Braxton" && password === "OGMSAdmin") {
+    res.redirect("/admin-panel");
+  } else {
+    res.status(401).send("⚠️ Invalid credentials");
+  }
+});
+
+// ===== Admin panel =====
+app.get("/admin-panel", (req, res) => {
+  const html = `
+    <html>
+      <head>
+        <title>Admin Panel</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 2rem; }
+          button { padding: 0.5rem 1rem; font-size: 1rem; }
+        </style>
+      </head>
+      <body>
+        <h1>Admin Panel</h1>
+        <p>AI is currently: <strong>${aiEnabled ? "Enabled" : "Disabled"}</strong></p>
+        <form method="POST" action="/toggle-ai">
+          <button type="submit">${aiEnabled ? "Disable AI" : "Enable AI"}</button>
+        </form>
+      </body>
+    </html>
+  `;
+  res.send(html);
+});
+
+app.post("/toggle-ai", (req, res) => {
+  aiEnabled = !aiEnabled;
+  console.log("AI enabled:", aiEnabled);
+  res.redirect("/admin-panel");
+});
+
+// ===== Global error handlers =====
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).send("⚠️ Internal Server Error");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection:", reason, promise);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+// ===== Start server =====
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
