@@ -24,68 +24,111 @@ app.use(express.static(path.join(__dirname, "public")));
 // ===== AI Toggle =====
 let aiEnabled = true;
 
-// ===== Admin IDs =====
-const ADMIN_IDS = new Set(["7da47027-38ea-4054-a66e-c4e0d9d8d54c"]);
-
 // ===== Chat API =====
 app.post("/api/chat", async (req, res) => {
   try {
-    const userId = req.headers["x-user-id"];
-
-    // Only block AI if disabled AND the user is not admin
-    if (!aiEnabled && !ADMIN_IDS.has(userId)) {
-      return res.json({ reply: "⚠️ AI is currently disabled by admin." });
-    }
+    if (!aiEnabled) return res.json({ reply: "⚠️ AI is currently disabled by admin." });
 
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages)) {
+      console.error("Invalid messages payload:", req.body);
       return res.status(400).json({ reply: "⚠️ Invalid messages payload" });
     }
 
-    const response = await fetch("https://api.groq.com/v1/completions", {
+    console.log("Sending messages to Groq API:", messages);
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: "openai/gpt-oss-20b",
         messages: messages.map(m => ({ role: m.role, content: m.content }))
-      })
+      }),
     });
 
     const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content || "⚠️ No reply";
+    console.log("Groq API response:", JSON.stringify(data, null, 2));
+
+    let reply = "⚠️ No reply";
+    if (data?.choices && data.choices[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    } else if (data?.error) {
+      console.error("Groq API error:", data.error);
+      reply = `⚠️ Groq API error: ${data.error.message}`;
+    } else {
+      console.error("Unexpected Groq API response:", data);
+    }
 
     res.json({ reply });
 
   } catch (err) {
-    console.error("Chat API error:", err);
+    console.error("Chat API exception:", err);
     res.status(500).json({ reply: "⚠️ Server error. Check console." });
   }
 });
 
-// ===== Admin Toggle API =====
-app.post("/api/admin-toggle", (req, res) => {
-  const userId = req.headers["x-user-id"];
-  if (!ADMIN_IDS.has(userId)) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
+// ===== Admin Login Page =====
+app.get("/admin", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-login.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Error serving admin login page:", err);
+      res.status(500).send("⚠️ Could not load admin login page. Check server logs.");
+    }
+  });
+});
 
-  const { toggle } = req.body;
-  aiEnabled = toggle === "on";
-  console.log(`AI enabled: ${aiEnabled}`);
-  res.json({ ok: true, aiEnabled });
+// ===== Admin Login Handler =====
+app.post("/admin-login", (req, res) => {
+  const { username, password } = req.body;
+  if (username === "Braxton" && password === "OGMSAdmin") {
+    res.redirect("/admin-panel");
+  } else {
+    res.status(401).send("⚠️ Invalid credentials.");
+  }
+});
+
+// ===== Admin Panel (Toggle AI) =====
+app.get("/admin-panel", (req, res) => {
+  const html = `
+    <html>
+      <head>
+        <title>Admin Panel</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 2rem; }
+          button { padding: 0.5rem 1rem; font-size: 1rem; }
+        </style>
+      </head>
+      <body>
+        <h1>Admin Panel</h1>
+        <p>AI is currently: <strong>${aiEnabled ? "Enabled" : "Disabled"}</strong></p>
+        <form method="POST" action="/toggle-ai">
+          <button type="submit">${aiEnabled ? "Disable AI" : "Enable AI"}</button>
+        </form>
+      </body>
+    </html>
+  `;
+  res.send(html);
+});
+
+app.post("/toggle-ai", (req, res) => {
+  aiEnabled = !aiEnabled;
+  console.log("AI enabled:", aiEnabled);
+  res.redirect("/admin-panel");
 });
 
 // ===== Serve homepage =====
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// ===== Serve admin login =====
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-login.html"));
+  const filePath = path.join(__dirname, "public", "index.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Error serving index page:", err);
+      res.status(500).send("⚠️ Could not load homepage. Check server logs.");
+    }
+  });
 });
 
 // ===== Global error handlers =====
