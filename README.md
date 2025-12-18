@@ -1,2 +1,48 @@
 # Al
 [ai](https://al-u2b2.onrender.com)
+
+
+# copy-paste
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="theme-color" content="#8000ff">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Classroom</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+</head>
+<body>
+  <header>
+    <h1>Solara AI</h1>
+  </header>
+
+  <div id="container">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <h2>Chats</h2>
+      <ul id="chat-list"></ul>
+      <button id="new-chat">+ New Chat</button>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main id="main-chat">
+      <div id="chat-window"></div>
+
+      <form id="chat-form">
+        <input type="text" id="chat-input" placeholder="Type your message..." required />
+        <input type="file" id="file-input" />
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
